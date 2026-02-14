@@ -62,6 +62,7 @@ Runtime behavior:
 
 - Structured in-memory part catalog + model fit matrix (`lib/data.js`)
 - Unstructured document snippets for install/troubleshooting citations (`lib/data.js`)
+- Test dataset includes refrigerator + dishwasher install, compatibility, and troubleshooting records used by the E2E suite
 
 ### APIs
 

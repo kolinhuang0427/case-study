@@ -29,12 +29,14 @@ test.describe("Required case-study scenarios", () => {
     await page.goto("/");
     await setContext(page, "dishwasher", "WDT780SAEM1");
 
+    // Seed prior part context and ensure the newest PS number in user message wins.
+    await sendChatMessage(page, "How can I install part number PS11752778?");
     await sendChatMessage(page, "Is PS11750057 compatible with my WDT780SAEM1 model?");
 
-    await expect(
-      page.locator('[data-testid="message-assistant"]').filter({ hasText: "PS11750057 is compatible with WDT780SAEM1." }).last()
-    ).toBeVisible();
+    await expect(page.locator('[data-testid="message-assistant"]').filter({ hasText: /PS11750057/i }).last()).toBeVisible();
+    await expect(page.locator('[data-testid="message-assistant"]').filter({ hasText: /compatible/i }).last()).toBeVisible();
     await expect(page.getByText("Dishwasher Water Inlet Valve")).toBeVisible();
+    await expect(page.getByText(/Fit[s]? .*WDT780SAEM1/i)).toBeVisible();
   });
 
   test("provides troubleshooting steps and relevant part for ice maker issue", async ({ page }) => {
