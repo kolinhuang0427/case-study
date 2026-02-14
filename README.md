@@ -1,70 +1,98 @@
-# Getting Started with Create React App
+# PartSelect Chat Agent Case Study
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+This repo now contains a **Next.js App Router** implementation of a scoped e-commerce chat assistant focused on:
 
-## Available Scripts
+- Refrigerator parts and repair support
+- Dishwasher parts and repair support
+- Compatibility checks by model number
+- Transactional support (add-to-cart stub + secure order support flow)
 
-In the project directory, you can run:
+## Why this design
 
-### `npm start`
+The assistant is intentionally narrow and reliable:
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+- It refuses out-of-scope appliance categories and redirects users to in-scope workflows.
+- It prioritizes model number capture for compatibility confidence.
+- It returns structured responses with product cards, fit hints, install checklists, and source citations.
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+## UX Features Implemented
 
-### `npm test`
+- Guided context bar (appliance type + model number)
+- Chat timeline with:
+  - rich product cards (price, stock, shipping ETA)
+  - compatibility actions
+  - install checklists
+  - source citation drawer
+- Secure order support form separated from free-text chat
+- Architecture side panel explaining routing/tools/guardrails
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+## Backend Architecture (implemented as stubs you can replace)
 
-### `npm run build`
+### Intent router
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+`PART_LOOKUP`, `COMPATIBILITY_CHECK`, `INSTALL_GUIDE`, `TROUBLESHOOTING`, `ORDER_SUPPORT`, `OUT_OF_SCOPE`.
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+### Tool layer
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+- `searchParts`
+- `getPartDetails`
+- `checkCompatibility`
+- `retrieveDocs`
+- `buildInstallSteps`
 
-### `npm run eject`
+### Tool contract layer
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+All tools now run through `lib/toolContracts.js`, which defines:
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+- JSON-schema input and output contracts
+- Auth metadata (`required`, `level`)
+- Latency budgets (`latencyBudgetMs`)
+- Fallback policy per tool
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+Runtime behavior:
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+- Input/output validation is enforced before and after execution.
+- Auth-required tools return deterministic fallback responses when unauthenticated.
+- Timeout/failure paths are normalized into fallback output.
+- `GET /api/chat` returns the registered tool contracts for inspection.
 
-## Learn More
+### Data sources
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+- Structured in-memory part catalog + model fit matrix (`lib/data.js`)
+- Unstructured document snippets for install/troubleshooting citations (`lib/data.js`)
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+### APIs
 
-### Code Splitting
+- `POST /api/chat` - orchestrates intent + tools and returns structured message payloads
+- `POST /api/order` - secure order support stub (replace with commerce backend)
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+### Telemetry
 
-### Analyzing the Bundle Size
+`lib/telemetry.js` tracks turn-level events (intent, context presence).
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+## Project Structure
 
-### Making a Progressive Web App
+- `app/page.js` - main chat experience
+- `app/api/chat/route.js` - chat agent endpoint
+- `app/api/order/route.js` - order lookup endpoint
+- `components/chat/*` - chat UI building blocks
+- `lib/agent.js` - router + response composer
+- `lib/tools.js` - tool registry handlers
+- `lib/data.js` - mock structured and unstructured knowledge
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+## Run locally
 
-### Advanced Configuration
+```bash
+npm install
+npm run dev
+```
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+Then open `http://localhost:3000`.
 
-### Deployment
+## Extending to production
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+- Replace `lib/data.js` with Postgres + vector DB adapters.
+- Swap `lib/tools.js` handlers to call real services.
+- Add authenticated customer session to `app/api/order/route.js`.
+- Add streaming responses in `/api/chat`.
+- Add offline evals for compatibility/install/troubleshooting accuracy.
