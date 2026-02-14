@@ -11,9 +11,10 @@ This repo now contains a **Next.js App Router** implementation of a scoped e-com
 
 The assistant is intentionally narrow and reliable:
 
-- It refuses out-of-scope appliance categories and redirects users to in-scope workflows.
+- It refuses out-of-scope requests and redirects users to in-scope workflows.
 - It prioritizes model number capture for compatibility confidence.
 - It returns structured responses with product cards, fit hints, install checklists, and source citations.
+- It uses tool contracts (schema/auth/latency/fallback) to make backend integrations predictable.
 
 ## UX Features Implemented
 
@@ -24,6 +25,7 @@ The assistant is intentionally narrow and reliable:
   - install checklists
   - source citation drawer
 - Secure order support form separated from free-text chat
+- Clickable quick actions that can set appliance context or trigger next workflow steps
 - Architecture side panel explaining routing/tools/guardrails
 
 ## Backend Architecture (implemented as stubs you can replace)
@@ -34,7 +36,7 @@ The assistant is intentionally narrow and reliable:
 
 ### Tool layer
 
-- `searchParts`
+- `searchParts` (token relevance scoring for natural-language symptoms)
 - `getPartDetails`
 - `checkCompatibility`
 - `retrieveDocs`
@@ -64,7 +66,7 @@ Runtime behavior:
 ### APIs
 
 - `POST /api/chat` - orchestrates intent + tools and returns structured message payloads
-- `POST /api/order` - secure order support stub (replace with commerce backend)
+- `POST /api/order` - secure order support stub for `track`, `return`, and `cancel` actions
 
 ### Telemetry
 
