@@ -86,10 +86,18 @@ Runtime behavior:
 
 ```bash
 npm install
+cp .env.example .env.local
+# set OPENAI_API_KEY in .env.local
 npm run dev
 ```
 
 Then open `http://localhost:3000`.
+
+### OpenAI runtime behavior
+
+- `POST /api/chat` now calls OpenAI Responses API to rewrite each assistant reply in real time.
+- If `OPENAI_API_KEY` is missing or OpenAI call fails, the app falls back to deterministic response text from the local agent.
+- You can override the model with `OPENAI_MODEL` (default: `gpt-5-nano-2025-08-07`).
 
 ## Automated E2E tests
 
@@ -107,6 +115,62 @@ Run:
 npx playwright install chromium
 npm run e2e
 ```
+
+## How to test
+
+Install deps:
+
+```bash
+npm install
+```
+
+Run lint/build sanity checks:
+
+```bash
+npm run lint
+npm run build
+```
+
+Install Playwright browser (first time only):
+
+```bash
+npx playwright install chromium
+```
+
+Run the full automated E2E suite:
+
+```bash
+npm run e2e
+```
+
+Expected: `5 passed` (install, compatibility, troubleshooting, out-of-scope, order return).
+
+Debug failures interactively (optional):
+
+```bash
+npm run e2e:headed
+# or
+npm run e2e:ui
+```
+
+Manually verify in browser (optional):
+
+```bash
+npm run dev
+```
+
+Open `http://localhost:3000` and test:
+
+- `How can I install part number PS11752778?`
+- `Is PS11750057 compatible with my WDT780SAEM1 model?`
+- `The ice maker on my Whirlpool fridge is not working. How can I fix it?`
+- Out-of-scope prompt like `Can you help fix my dryer?`
+
+Verify CI on PR:
+
+1. Push branch and open a PR.
+2. In GitHub Actions, confirm workflow `E2E Tests` (`.github/workflows/e2e.yml`) is green.
+3. If it fails, download the `playwright-report` artifact from the workflow run.
 
 ## Extending to production
 
