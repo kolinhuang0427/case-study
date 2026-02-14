@@ -11,9 +11,9 @@ export default function MessageList({
   quickActionsDisabled
 }) {
   return (
-    <div className="message-list">
+    <div className="message-list" data-testid="message-list">
       {messages.map((message) => (
-        <div key={message.id} className={`message-row ${message.role}`}>
+        <div key={message.id} className={`message-row ${message.role}`} data-testid={`message-${message.role}`}>
           <div className={`bubble ${message.role}`}>
             <p>{message.content}</p>
 

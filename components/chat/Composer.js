@@ -14,6 +14,7 @@ export default function Composer({ onSend, disabled }) {
   return (
     <div className="composer">
       <textarea
+        data-testid="composer-input"
         rows={3}
         placeholder="Ask about parts, fit checks, install steps, troubleshooting, or order support..."
         value={value}
@@ -25,7 +26,7 @@ export default function Composer({ onSend, disabled }) {
           }
         }}
       />
-      <button onClick={submit} disabled={disabled}>
+      <button data-testid="composer-send" onClick={submit} disabled={disabled}>
         Send
       </button>
     </div>

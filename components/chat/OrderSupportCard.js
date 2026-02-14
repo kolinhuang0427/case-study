@@ -35,26 +35,32 @@ export default function OrderSupportCard() {
   }
 
   return (
-    <section id="order-support-card" className="order-support">
+    <section id="order-support-card" className="order-support" data-testid="order-support-card">
       <h3>Secure order support</h3>
       <p className="muted">Track status, start returns, and request order cancellation.</p>
       <div className="order-fields">
-        <select value={action} onChange={(event) => setAction(event.target.value)}>
+        <select
+          data-testid="order-action"
+          value={action}
+          onChange={(event) => setAction(event.target.value)}
+        >
           <option value="track">Track order</option>
           <option value="return">Start return</option>
           <option value="cancel">Cancel order</option>
         </select>
         <input
+          data-testid="order-id-input"
           value={orderId}
           onChange={(event) => setOrderId(event.target.value)}
           placeholder="Order ID"
         />
         <input
+          data-testid="order-postal-input"
           value={postalCode}
           onChange={(event) => setPostalCode(event.target.value)}
           placeholder="Postal / ZIP code"
         />
-        <button onClick={lookupOrder} disabled={loading}>
+        <button data-testid="order-submit" onClick={lookupOrder} disabled={loading}>
           {loading ? "Checking..." : "Submit"}
         </button>
       </div>

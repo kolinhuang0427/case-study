@@ -12,6 +12,7 @@ export default function ModelContextBar({ applianceType, modelNumber, onApplianc
         <label>
           Appliance
           <select
+            data-testid="appliance-select"
             value={applianceType}
             onChange={(event) => onApplianceChange(event.target.value)}
           >
@@ -24,6 +25,7 @@ export default function ModelContextBar({ applianceType, modelNumber, onApplianc
         <label>
           Model number
           <input
+            data-testid="model-input"
             value={modelNumber}
             onChange={(event) => onModelChange(event.target.value.toUpperCase())}
             placeholder="e.g. WDT780SAEM1"

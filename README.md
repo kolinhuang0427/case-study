@@ -91,6 +91,23 @@ npm run dev
 
 Then open `http://localhost:3000`.
 
+## Automated E2E tests
+
+The repository includes a Playwright end-to-end suite for required scenarios:
+
+- Install guide lookup (`PS11752778`)
+- Compatibility check (`WDT780SAEM1` + `PS11750057`)
+- Ice maker troubleshooting flow
+- Out-of-scope refusal behavior
+- Secure order support return flow
+
+Run:
+
+```bash
+npx playwright install chromium
+npm run e2e
+```
+
 ## Extending to production
 
 - Replace `lib/data.js` with Postgres + vector DB adapters.
