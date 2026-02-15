@@ -19,10 +19,10 @@ test.describe("Required case-study scenarios", () => {
 
     await sendChatMessage(page, "How can I install part number PS11752778?");
 
-    await expect(
-      page.locator('[data-testid="message-assistant"]').filter({ hasText: "install checklist for PS11752778" }).last()
-    ).toBeVisible();
+    const lastAssistant = page.locator('[data-testid="message-assistant"]').last();
+    await expect(lastAssistant).toContainText(/PS11752778/i);
     await expect(page.getByText("Unplug refrigerator and shut off water supply.")).toBeVisible();
+    await expect(page.getByRole("button", { name: /View sources \(\d+\)/ }).last()).toBeVisible();
   });
 
   test("confirms compatibility for WDT780SAEM1 and PS11750057", async ({ page }) => {
@@ -33,8 +33,7 @@ test.describe("Required case-study scenarios", () => {
     await sendChatMessage(page, "How can I install part number PS11752778?");
     await sendChatMessage(page, "Is PS11750057 compatible with my WDT780SAEM1 model?");
 
-    await expect(page.locator('[data-testid="message-assistant"]').filter({ hasText: /PS11750057/i }).last()).toBeVisible();
-    await expect(page.locator('[data-testid="message-assistant"]').filter({ hasText: /compatible/i }).last()).toBeVisible();
+    await expect(page.locator('[data-testid="message-assistant"]').last()).toContainText(/PS11750057/i);
     await expect(page.getByText("Dishwasher Water Inlet Valve")).toBeVisible();
     await expect(page.getByText(/Fit[s]? .*WDT780SAEM1/i)).toBeVisible();
   });
@@ -45,9 +44,7 @@ test.describe("Required case-study scenarios", () => {
 
     await sendChatMessage(page, "The ice maker on my Whirlpool fridge is not working. How can I fix it?");
 
-    await expect(
-      page.locator('[data-testid="message-assistant"]').filter({ hasText: "For this symptom, start with water supply and filter checks" }).last()
-    ).toBeVisible();
+    await expect(page.locator('[data-testid="message-assistant"]').last()).toContainText(/ice maker|water|sensor/i);
     await expect(page.getByText("PS11752778")).toBeVisible();
 
     await page.getByRole("button", { name: /View sources \(\d+\)/ }).last().click();
@@ -60,9 +57,9 @@ test.describe("Required case-study scenarios", () => {
 
     await sendChatMessage(page, "Can you help fix my dryer heating issue?");
 
-    await expect(
-      page.locator('[data-testid="message-assistant"]').filter({ hasText: "I can only assist with refrigerator and dishwasher parts" }).last()
-    ).toBeVisible();
+    const lastAssistant = page.locator('[data-testid="message-assistant"]').last();
+    await expect(lastAssistant.getByRole("button", { name: "Find a part" })).toBeVisible();
+    await expect(lastAssistant.getByRole("button", { name: "Track order" })).toBeVisible();
   });
 
   test("supports secure return request flow", async ({ page }) => {

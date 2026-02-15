@@ -5,6 +5,7 @@ import Composer from "../components/chat/Composer";
 import MessageList from "../components/chat/MessageList";
 import ModelContextBar from "../components/chat/ModelContextBar";
 import OrderSupportCard from "../components/chat/OrderSupportCard";
+import { trackEvent } from "../lib/telemetry";
 
 const START_MESSAGE = {
   id: "m0",
@@ -15,6 +16,7 @@ const START_MESSAGE = {
 };
 
 export default function HomePage() {
+  const conversationId = useMemo(() => `c-${Date.now()}`, []);
   const [messages, setMessages] = useState([START_MESSAGE]);
   const [loading, setLoading] = useState(false);
   const [applianceType, setApplianceType] = useState("");
@@ -51,7 +53,8 @@ export default function HomePage() {
         ...current,
         {
           id: `a-${Date.now()}`,
-          ...data.response
+          ...data.response,
+          intent: data.intent || "UNKNOWN"
         }
       ]);
       if (data.context) {
@@ -71,6 +74,124 @@ export default function HomePage() {
       ]);
     } finally {
       setLoading(false);
+    }
+  }
+
+  function getActionTelemetryBase({ action, message }) {
+    return {
+      action_type: action.type,
+      psNumber: action.payload?.psNumber || selectedPsNumber || null,
+      modelNumber: action.payload?.modelNumber || modelNumber || null,
+      intent: message.intent || "UNKNOWN",
+      conversation_id: conversationId
+    };
+  }
+
+  async function handleStructuredAction({ action, message }) {
+    const telemetryBase = getActionTelemetryBase({ action, message });
+    trackEvent("action_clicked", telemetryBase);
+
+    if (action.requiresConfirmation) {
+      const confirmed = window.confirm(`Confirm action: ${action.label}?`);
+      if (!confirmed) {
+        return { ok: false, error: "Action cancelled.", disable: false };
+      }
+    }
+
+    try {
+      if (action.type === "checkout_now") {
+        const response = await fetch("/api/checkout/session", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(action.payload)
+        });
+        const data = await response.json();
+        if (!response.ok) {
+          trackEvent("action_failed", { ...telemetryBase, error: data?.error || "checkout_failed" });
+          return { ok: false, error: data?.error || "Unable to start checkout.", disable: true };
+        }
+        setMessages((current) => [
+          ...current,
+          {
+            id: `a-${Date.now()}`,
+            role: "assistant",
+            content: `Checkout session ready. Continue here: ${data.redirectUrl}`,
+            nextActions: ["Keep shopping"]
+          }
+        ]);
+        trackEvent("action_succeeded", telemetryBase);
+        return { ok: true };
+      }
+
+      if (action.type === "check_compatible_alternatives") {
+        const response = await fetch("/api/chat/actions/alternatives", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(action.payload)
+        });
+        const data = await response.json();
+        if (!response.ok) {
+          trackEvent("action_failed", { ...telemetryBase, error: data?.error || "alternatives_failed" });
+          return { ok: false, error: data?.error || "Unable to fetch alternatives.", disable: true };
+        }
+
+        setMessages((current) => [
+          ...current,
+          {
+            id: `a-${Date.now()}`,
+            role: "assistant",
+            intent: "PART_LOOKUP",
+            content: data.alternatives?.length
+              ? "Here are compatible alternatives you can review."
+              : "I could not find compatible alternatives right now.",
+            parts: data.alternatives || [],
+            nextActions: data.alternatives?.length ? ["Check fit", "Add to cart"] : ["Search by model number"]
+          }
+        ]);
+        trackEvent("action_succeeded", telemetryBase);
+        return { ok: true };
+      }
+
+      if (action.type === "notify_when_in_stock") {
+        const email = window.prompt("Enter email for stock alerts:");
+        if (!email) {
+          return { ok: false, error: "Email is required for stock alerts.", disable: false };
+        }
+        const response = await fetch("/api/alerts/back-in-stock", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            ...action.payload,
+            email
+          })
+        });
+        const data = await response.json();
+        if (!response.ok) {
+          trackEvent("action_failed", { ...telemetryBase, error: data?.error || "notify_failed" });
+          return { ok: false, error: data?.error || "Unable to subscribe to stock alerts.", disable: true };
+        }
+        setMessages((current) => [
+          ...current,
+          {
+            id: `a-${Date.now()}`,
+            role: "assistant",
+            content: data.message || "You are subscribed for back-in-stock alerts."
+          }
+        ]);
+        trackEvent("action_succeeded", telemetryBase);
+        return { ok: true };
+      }
+
+      return { ok: false, error: "Unsupported action type.", disable: true };
+    } catch (error) {
+      trackEvent("action_failed", { ...telemetryBase, error: error?.message || "request_failed" });
+      return { ok: false, error: "Action failed. Please try again.", disable: true };
+    }
+  }
+
+  function handleActionsRendered(renderedActions) {
+    for (const { message, action } of renderedActions) {
+      trackEvent("action_rendered", getActionTelemetryBase({ message, action }));
     }
   }
 
@@ -154,6 +275,8 @@ export default function HomePage() {
             modelNumber={modelNumber}
             onCardAction={handleCardAction}
             onQuickAction={handleQuickAction}
+            onActionButtonPress={handleStructuredAction}
+            onActionsRendered={handleActionsRendered}
             quickActionsDisabled={loading}
           />
           <Composer onSend={sendMessage} disabled={loading} />
