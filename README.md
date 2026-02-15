@@ -60,8 +60,9 @@ Runtime behavior:
 
 ### Data sources
 
-- Structured in-memory part catalog + model fit matrix (`lib/data.js`)
-- Unstructured document snippets for install/troubleshooting citations (`lib/data.js`)
+- Structured Postgres adapter for part catalog, fit matrix, and install steps (`lib/adapters/postgres.js`)
+- Vector retrieval adapter for documentation ranking (`lib/adapters/vectorDb.js`)
+- Seed dataset lives in `lib/mockData.js` and is upserted into Postgres when `DATABASE_URL` is configured
 - Test dataset includes refrigerator + dishwasher install, compatibility, and troubleshooting records used by the E2E suite
 
 ### APIs
@@ -89,6 +90,7 @@ Runtime behavior:
 npm install
 cp .env.example .env.local
 # set OPENAI_API_KEY in .env.local
+npm run seed:db
 npm run dev
 ```
 
@@ -175,7 +177,7 @@ Verify CI on PR:
 
 ## Extending to production
 
-- Replace `lib/data.js` with Postgres + vector DB adapters.
+- Expand Postgres/vector adapters for production-grade indexing and larger catalog ingestion pipelines.
 - Swap `lib/tools.js` handlers to call real services.
 - Add authenticated customer session to `app/api/order/route.js`.
 - Add streaming responses in `/api/chat`.
