@@ -36,11 +36,10 @@ The assistant is intentionally narrow and reliable:
 
 ### Tool layer
 
-- `searchParts` (token relevance scoring for natural-language symptoms)
-- `getPartDetails`
-- `checkCompatibility`
-- `retrieveDocs`
-- `buildInstallSteps`
+- `lib/tools.js` now calls real service endpoints for catalog/docs/install operations
+- `CATALOG_SERVICE_URL` powers part search/details/compatibility/install steps
+- `DOCS_SERVICE_URL` powers retrieval for citations
+- Local Postgres/vector adapters are retained as fallback for local development and tests
 
 ### Tool contract layer
 
@@ -69,6 +68,15 @@ Runtime behavior:
 
 - `POST /api/chat` - orchestrates intent + tools and returns structured message payloads
 - `POST /api/order` - secure order support stub for `track`, `return`, and `cancel` actions
+
+### Service integration env
+
+Set these in `.env.local` to route tools to production-like services:
+
+- `CATALOG_SERVICE_URL` (expects `/parts/search`, `/parts/:psNumber`, `/compatibility/check`, `/parts/:psNumber/install-steps`)
+- `DOCS_SERVICE_URL` (expects `/docs/retrieve`)
+- `TOOL_SERVICE_API_KEY` (optional bearer token sent to both services)
+- `TOOL_SERVICE_TIMEOUT_MS` (optional request timeout, default `900`)
 
 ### Telemetry
 
