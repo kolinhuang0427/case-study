@@ -1,70 +1,192 @@
-# Getting Started with Create React App
+# PartSelect Chat Agent Case Study
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+This repo now contains a **Next.js App Router** implementation of a scoped e-commerce chat assistant focused on:
 
-## Available Scripts
+- Refrigerator parts and repair support
+- Dishwasher parts and repair support
+- Compatibility checks by model number
+- Transactional support (add-to-cart stub + secure order support flow)
 
-In the project directory, you can run:
+## Why this design
 
-### `npm start`
+The assistant is intentionally narrow and reliable:
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+- It refuses out-of-scope requests and redirects users to in-scope workflows.
+- It prioritizes model number capture for compatibility confidence.
+- It returns structured responses with product cards, fit hints, install checklists, and source citations.
+- It uses tool contracts (schema/auth/latency/fallback) to make backend integrations predictable.
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+## UX Features Implemented
 
-### `npm test`
+- Guided context bar (appliance type + model number)
+- Chat timeline with:
+  - rich product cards (price, stock, shipping ETA)
+  - compatibility actions
+  - install checklists
+  - source citation drawer
+- Secure order support form separated from free-text chat
+- Clickable quick actions that can set appliance context or trigger next workflow steps
+- Architecture side panel explaining routing/tools/guardrails
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+## Backend Architecture (implemented as stubs you can replace)
 
-### `npm run build`
+### Intent router
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+`PART_LOOKUP`, `COMPATIBILITY_CHECK`, `INSTALL_GUIDE`, `TROUBLESHOOTING`, `ORDER_SUPPORT`, `OUT_OF_SCOPE`.
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+### Tool layer
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+- `lib/tools.js` now calls real service endpoints for catalog/docs/install operations
+- `CATALOG_SERVICE_URL` powers part search/details/compatibility/install steps
+- `DOCS_SERVICE_URL` powers retrieval for citations
+- Local Postgres/vector adapters are retained as fallback for local development and tests
 
-### `npm run eject`
+### Tool contract layer
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+All tools now run through `lib/toolContracts.js`, which defines:
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+- JSON-schema input and output contracts
+- Auth metadata (`required`, `level`)
+- Latency budgets (`latencyBudgetMs`)
+- Fallback policy per tool
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+Runtime behavior:
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+- Input/output validation is enforced before and after execution.
+- Auth-required tools return deterministic fallback responses when unauthenticated.
+- Timeout/failure paths are normalized into fallback output.
+- `GET /api/chat` returns the registered tool contracts for inspection.
 
-## Learn More
+### Data sources
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+- Structured Postgres adapter for part catalog, fit matrix, and install steps (`lib/adapters/postgres.js`)
+- Vector retrieval adapter for documentation ranking (`lib/adapters/vectorDb.js`)
+- Seed dataset lives in `lib/mockData.js` and is upserted into Postgres when `DATABASE_URL` is configured
+- Test dataset includes refrigerator + dishwasher install, compatibility, and troubleshooting records used by the E2E suite
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+### APIs
 
-### Code Splitting
+- `POST /api/chat` - orchestrates intent + tools and returns structured message payloads
+- `POST /api/order` - secure order support stub for `track`, `return`, and `cancel` actions
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+### Service integration env
 
-### Analyzing the Bundle Size
+Set these in `.env.local` to route tools to production-like services:
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+- `CATALOG_SERVICE_URL` (expects `/parts/search`, `/parts/:psNumber`, `/compatibility/check`, `/parts/:psNumber/install-steps`)
+- `DOCS_SERVICE_URL` (expects `/docs/retrieve`)
+- `TOOL_SERVICE_API_KEY` (optional bearer token sent to both services)
+- `TOOL_SERVICE_TIMEOUT_MS` (optional request timeout, default `900`)
 
-### Making a Progressive Web App
+### Telemetry
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+`lib/telemetry.js` tracks turn-level events (intent, context presence).
 
-### Advanced Configuration
+## Project Structure
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+- `app/page.js` - main chat experience
+- `app/api/chat/route.js` - chat agent endpoint
+- `app/api/order/route.js` - order lookup endpoint
+- `components/chat/*` - chat UI building blocks
+- `lib/agent.js` - router + response composer
+- `lib/tools.js` - tool registry handlers
+- `lib/data.js` - mock structured and unstructured knowledge
 
-### Deployment
+## Run locally
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
+```bash
+npm install
+cp .env.example .env.local
+# set OPENAI_API_KEY in .env.local
+npm run seed:db
+npm run dev
+```
 
-### `npm run build` fails to minify
+Then open `http://localhost:3000`.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+### OpenAI runtime behavior
+
+- `POST /api/chat` now calls OpenAI Responses API to rewrite each assistant reply in real time.
+- If `OPENAI_API_KEY` is missing or OpenAI call fails, the app falls back to deterministic response text from the local agent.
+- You can override the model with `OPENAI_MODEL` (default: `gpt-5-nano-2025-08-07`).
+
+## Automated E2E tests
+
+The repository includes a Playwright end-to-end suite for required scenarios:
+
+- Install guide lookup (`PS11752778`)
+- Compatibility check (`WDT780SAEM1` + `PS11750057`)
+- Ice maker troubleshooting flow
+- Out-of-scope refusal behavior
+- Secure order support return flow
+
+Run:
+
+```bash
+npx playwright install chromium
+npm run e2e
+```
+
+## How to test
+
+Install deps:
+
+```bash
+npm install
+```
+
+Run lint/build sanity checks:
+
+```bash
+npm run lint
+npm run build
+```
+
+Install Playwright browser (first time only):
+
+```bash
+npx playwright install chromium
+```
+
+Run the full automated E2E suite:
+
+```bash
+npm run e2e
+```
+
+Expected: `5 passed` (install, compatibility, troubleshooting, out-of-scope, order return).
+
+Debug failures interactively (optional):
+
+```bash
+npm run e2e:headed
+# or
+npm run e2e:ui
+```
+
+Manually verify in browser (optional):
+
+```bash
+npm run dev
+```
+
+Open `http://localhost:3000` and test:
+
+- `How can I install part number PS11752778?`
+- `Is PS11750057 compatible with my WDT780SAEM1 model?`
+- `The ice maker on my Whirlpool fridge is not working. How can I fix it?`
+- Out-of-scope prompt like `Can you help fix my dryer?`
+
+Verify CI on PR:
+
+1. Push branch and open a PR.
+2. In GitHub Actions, confirm workflow `E2E Tests` (`.github/workflows/e2e.yml`) is green.
+3. If it fails, download the `playwright-report` artifact from the workflow run.
+
+## Extending to production
+
+- Expand Postgres/vector adapters for production-grade indexing and larger catalog ingestion pipelines.
+- Swap `lib/tools.js` handlers to call real services.
+- Add authenticated customer session to `app/api/order/route.js`.
+- Add streaming responses in `/api/chat`.
+- Add offline evals for compatibility/install/troubleshooting accuracy.
